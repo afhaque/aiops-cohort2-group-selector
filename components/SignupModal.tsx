@@ -1,14 +1,7 @@
 "use client";
 
-import { useState } from "react";
-
-interface Group {
-  id: number;
-  channel_name: string;
-  sector: string;
-  max_members: number;
-  member_count: number;
-}
+import { useEffect, useRef, useState } from "react";
+import type { Group } from "@/lib/types";
 
 interface SignupModalProps {
   group: Group;
@@ -16,18 +9,28 @@ interface SignupModalProps {
   onSuccess: () => void;
 }
 
+const INPUT_CLASS =
+  "w-full rounded-lg border border-brand-border bg-brand-dark px-4 py-2.5 text-white placeholder-gray-600 outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple";
+
 export default function SignupModal({ group, onClose, onSuccess }: SignupModalProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   const spotsLeft = group.max_members - group.member_count;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
+    setError(null);
     setLoading(true);
 
     try {
@@ -45,7 +48,7 @@ export default function SignupModal({ group, onClose, onSuccess }: SignupModalPr
       }
 
       setSuccess(data.message);
-      setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         onSuccess();
         onClose();
       }, 2000);
@@ -89,7 +92,7 @@ export default function SignupModal({ group, onClose, onSuccess }: SignupModalPr
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your name"
-                className="w-full rounded-lg border border-brand-border bg-brand-dark px-4 py-2.5 text-white placeholder-gray-600 outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple"
+                className={INPUT_CLASS}
               />
             </div>
 
@@ -103,7 +106,7 @@ export default function SignupModal({ group, onClose, onSuccess }: SignupModalPr
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full rounded-lg border border-brand-border bg-brand-dark px-4 py-2.5 text-white placeholder-gray-600 outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple"
+                className={INPUT_CLASS}
               />
             </div>
 

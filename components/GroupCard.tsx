@@ -1,13 +1,6 @@
 "use client";
 
-interface Group {
-  id: number;
-  channel_name: string;
-  sector: string;
-  description: string;
-  max_members: number;
-  member_count: number;
-}
+import type { Group } from "@/lib/types";
 
 interface GroupCardProps {
   group: Group;
@@ -34,10 +27,10 @@ export default function GroupCard({ group, onSelect }: GroupCardProps) {
 
   return (
     <div
-      className={`relative flex flex-col rounded-xl border p-5 transition-all duration-200 ${
+      className={`relative flex flex-col rounded-xl border border-brand-border bg-brand-card p-5 transition-all duration-200 ${
         isFull
-          ? "border-brand-border bg-brand-card opacity-50 cursor-not-allowed"
-          : "border-brand-border bg-brand-card hover:border-brand-purple hover:shadow-lg hover:shadow-purple-900/30 cursor-pointer"
+          ? "opacity-50 cursor-not-allowed"
+          : "hover:border-brand-purple hover:shadow-lg hover:shadow-purple-900/30 cursor-pointer"
       }`}
       onClick={() => !isFull && onSelect(group)}
     >

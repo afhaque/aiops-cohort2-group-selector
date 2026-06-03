@@ -3,6 +3,8 @@ import { sql } from "@/lib/db";
 
 export const runtime = "edge";
 
+const EMAIL_UNIQUE_CONSTRAINT = "gs_signups_email_unique";
+
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { name, email, group_id } = body;
@@ -16,36 +18,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
   }
 
-  // Check if group exists and get current count atomically
-  const [group] = await sql`
-    SELECT g.id, g.sector, g.channel_name, g.max_members,
-           COUNT(s.id)::int AS member_count
-    FROM gs_groups g
-    LEFT JOIN gs_signups s ON s.group_id = g.id
-    WHERE g.id = ${group_id}
-    GROUP BY g.id
-  `;
-
+  // Fetch group info for response messaging
+  const [group] = await sql`SELECT id, sector, channel_name, max_members FROM gs_groups WHERE id = ${group_id}`;
   if (!group) {
     return NextResponse.json({ error: "Group not found." }, { status: 404 });
   }
 
-  if (group.member_count >= group.max_members) {
-    return NextResponse.json({
-      error: `This group is full (${group.max_members}/${group.max_members} members).`
-    }, { status: 409 });
-  }
-
+  // Atomic conditional INSERT: only inserts if group is under capacity.
+  // Avoids TOCTOU race between separate SELECT+INSERT.
   try {
-    await sql`
+    const inserted = await sql`
       INSERT INTO gs_signups (name, email, group_id)
-      VALUES (${name.trim()}, ${email.trim().toLowerCase()}, ${group_id})
+      SELECT ${name.trim()}, ${email.trim().toLowerCase()}, ${group_id}
+      FROM gs_groups g
+      WHERE g.id = ${group_id}
+        AND (SELECT COUNT(*) FROM gs_signups WHERE group_id = ${group_id}) < g.max_members
+      RETURNING id
     `;
+
+    if (inserted.length === 0) {
+      return NextResponse.json({
+        error: `This group is full (${group.max_members}/${group.max_members} members).`,
+      }, { status: 409 });
+    }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    if (message.includes("gs_signups_email_unique")) {
+    if (message.includes(EMAIL_UNIQUE_CONSTRAINT)) {
       return NextResponse.json({
-        error: "This email is already registered. Each student can only join one group."
+        error: "This email is already registered. Each student can only join one group.",
       }, { status: 409 });
     }
     throw err;
@@ -53,6 +53,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    message: `You've joined ${group.sector} (${group.channel_name})!`
+    message: `You've joined ${group.sector} (${group.channel_name})!`,
   });
 }

@@ -3,15 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import GroupCard from "@/components/GroupCard";
 import SignupModal from "@/components/SignupModal";
+import type { Group } from "@/lib/types";
 
-interface Group {
-  id: number;
-  channel_name: string;
-  sector: string;
-  description: string;
-  max_members: number;
-  member_count: number;
-}
+const GRID_CLASS = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
 
 export default function HomePage() {
   const [groups, setGroups] = useState<Group[]>([]);
@@ -34,8 +28,13 @@ export default function HomePage() {
     fetchGroups();
   }, [fetchGroups]);
 
-  const totalSignups = groups.reduce((sum, g) => sum + g.member_count, 0);
-  const totalSpots = groups.reduce((sum, g) => sum + g.max_members, 0);
+  const { totalSignups, totalSpots } = groups.reduce(
+    (acc, g) => ({
+      totalSignups: acc.totalSignups + g.member_count,
+      totalSpots: acc.totalSpots + g.max_members,
+    }),
+    { totalSignups: 0, totalSpots: 0 }
+  );
 
   return (
     <main className="min-h-screen bg-brand-dark">
@@ -67,26 +66,18 @@ export default function HomePage() {
 
       {/* Grid */}
       <section className="mx-auto max-w-6xl px-4 py-10">
-        {loading ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {Array.from({ length: 10 }).map((_, i) => (
-              <div
-                key={i}
-                className="h-56 animate-pulse rounded-xl border border-brand-border bg-brand-card"
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {groups.map((group) => (
-              <GroupCard
-                key={group.id}
-                group={group}
-                onSelect={setSelectedGroup}
-              />
-            ))}
-          </div>
-        )}
+        <div className={GRID_CLASS}>
+          {loading
+            ? Array.from({ length: 10 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-56 animate-pulse rounded-xl border border-brand-border bg-brand-card"
+                />
+              ))
+            : groups.map((group) => (
+                <GroupCard key={group.id} group={group} onSelect={setSelectedGroup} />
+              ))}
+        </div>
 
         {!loading && groups.length === 0 && (
           <div className="py-20 text-center text-gray-500">

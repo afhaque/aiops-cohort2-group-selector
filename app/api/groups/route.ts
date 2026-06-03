@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 
 export const runtime = "edge";
-export const revalidate = 0;
 
 export async function GET() {
   const groups = await sql`
